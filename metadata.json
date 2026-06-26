@@ -1,0 +1,6 @@
+{
+  "name": "Employee Management & Leave Tracker",
+  "description": "A high-performance employee information tracking system with real-time leave management, online presence monitoring, and a step-by-step local PC server installer wizard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

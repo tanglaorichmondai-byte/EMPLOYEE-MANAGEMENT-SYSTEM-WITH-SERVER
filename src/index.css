@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  @media print {
+    /* Hide everything by default */
+    body * {
+      visibility: hidden !important;
+    }
+    
+    /* Show only the print area and its children */
+    #print-area, #print-area * {
+      visibility: visible !important;
+    }
+    
+    /* Ensure the print area takes up the whole page */
+    #print-area {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+
+    /* Remove specific UI elements that might still be visible or taking space */
+    .no-print {
+      display: none !important;
+    }
+
+    @page {
+      margin: 1.5cm;
+      size: auto;
+    }
+  }
+}
