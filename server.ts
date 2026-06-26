@@ -43,6 +43,8 @@ interface UserAccount {
   role: "admin" | "user";
   status: "pending" | "approved" | "rejected";
   password?: string;
+  resetPasswordRequested?: boolean;
+  pendingPassword?: string;
   createdAt: string;
 }
 
@@ -269,7 +271,7 @@ async function startServer() {
   });
 
   app.post("/api/auth/register", (req, res) => {
-    const { fullName, email, position } = req.body;
+    const { fullName, email, position, password } = req.body;
     const db = readDatabase();
     
     if (db.users.find(u => u.email === email)) {
@@ -283,7 +285,7 @@ async function startServer() {
       position,
       role: "user", // defaults to user, admin can't be registered this way usually
       status: "pending",
-      password: "password123", // default password for new registrations for prototype
+      password: password || "password123", // default fallback just in case
       createdAt: new Date().toISOString()
     };
     
@@ -293,6 +295,25 @@ async function startServer() {
       res.status(201).json({ message: "Registration requested successfully. Please wait for approval.", user: newUser });
     } else {
       res.status(500).json({ error: "Failed to register" });
+    }
+  });
+
+  app.post("/api/auth/request-password-reset", (req, res) => {
+    const { email, newPassword } = req.body;
+    const db = readDatabase();
+    
+    const user = db.users.find(u => u.email === email);
+    if (!user) {
+      return res.status(404).json({ error: "User with this email not found" });
+    }
+    
+    user.resetPasswordRequested = true;
+    user.pendingPassword = newPassword;
+    
+    if (writeDatabase(db)) {
+      res.json({ message: "Password reset requested. Please wait for admin approval." });
+    } else {
+      res.status(500).json({ error: "Failed to request password reset" });
     }
   });
 
@@ -330,6 +351,28 @@ async function startServer() {
     
     if (writeDatabase(db)) {
       res.json(db.users[index]);
+    } else {
+      res.status(500).json({ error: "Database save failed" });
+    }
+  });
+
+  app.put("/api/users/:id/approve-reset-password", (req, res) => {
+    const { id } = req.params;
+    const db = readDatabase();
+    
+    const index = db.users.findIndex((u) => u.id === id);
+    if (index === -1) return res.status(404).json({ error: "User not found" });
+    
+    if (db.users[index].pendingPassword) {
+      db.users[index].password = db.users[index].pendingPassword;
+    } else {
+      db.users[index].password = "password123";
+    }
+    db.users[index].resetPasswordRequested = false;
+    db.users[index].pendingPassword = undefined;
+    
+    if (writeDatabase(db)) {
+      res.json({ message: "Password reset approved", user: db.users[index] });
     } else {
       res.status(500).json({ error: "Database save failed" });
     }

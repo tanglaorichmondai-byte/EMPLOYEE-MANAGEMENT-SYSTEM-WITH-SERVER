@@ -52,7 +52,7 @@ export default function Utilities({ apiPrefix }: UtilitiesProps) {
         fetchUsers();
       }
     } catch (e) {
-      alert("Failed to update user status.");
+      console.error("Failed to update user status.");
     }
   };
 
@@ -70,7 +70,26 @@ export default function Utilities({ apiPrefix }: UtilitiesProps) {
         fetchUsers();
       }
     } catch (e) {
-      alert("Failed to update user role.");
+      console.error("Failed to update user role.");
+    }
+  };
+
+  const handleApprovePasswordReset = async (userId: string) => {
+    try {
+      const res = await fetch(`${apiPrefix}/api/users/${userId}/approve-reset-password`, {
+        method: "PUT",
+        headers: { 
+          "ngrok-skip-browser-warning": "true"
+        }
+      });
+      if (res.ok) {
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        console.error(data.error || "Failed to reset password.");
+      }
+    } catch (e) {
+      console.error("Failed to reset password.");
     }
   };
 
@@ -94,7 +113,6 @@ export default function Utilities({ apiPrefix }: UtilitiesProps) {
       setTimeout(() => setSuccess(false), 5000);
     } catch (error) {
       console.error("Backup trigger failed", error);
-      alert("Failed to initiate backup download. Please check server connection.");
     } finally {
       setBackingUp(false);
     }
@@ -268,8 +286,17 @@ export default function Utilities({ apiPrefix }: UtilitiesProps) {
                                 </button>
                               </>
                             )}
-                            {user.status !== "pending" && (
+                            {user.status !== "pending" && !user.resetPasswordRequested && (
                               <span className="text-xs text-slate-400 italic px-2 py-1">Actioned</span>
+                            )}
+                            {user.resetPasswordRequested && (
+                              <button 
+                                onClick={() => handleApprovePasswordReset(user.id)}
+                                className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg hover:bg-amber-200 transition-colors uppercase"
+                                title="Approve Password Reset"
+                              >
+                                Reset Pass
+                              </button>
                             )}
                           </div>
                         </td>

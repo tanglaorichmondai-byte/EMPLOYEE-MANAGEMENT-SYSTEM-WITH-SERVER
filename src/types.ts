@@ -19,6 +19,8 @@ export interface UserAccount {
   role: "admin" | "user";
   status: "pending" | "approved" | "rejected";
   password?: string;
+  resetPasswordRequested?: boolean;
+  pendingPassword?: string;
   createdAt: string;
 }
 

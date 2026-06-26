@@ -7,9 +7,10 @@ interface AuthScreenProps {
 }
 
 export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProps) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot_password">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   
   // Registration fields
   const [fullName, setFullName] = useState("");
@@ -18,6 +19,41 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const res = await fetch(`${apiPrefix}/api/auth/request-password-reset`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
+        body: JSON.stringify({ email, newPassword: password })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Password reset request failed");
+      }
+      
+      setSuccessMsg(data.message);
+      setMode("login");
+      setPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +83,10 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccessMsg(null);
@@ -57,7 +97,7 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "true"
         },
-        body: JSON.stringify({ email, fullName, position })
+        body: JSON.stringify({ email, password, fullName, position })
       });
       
       const data = await res.json();
@@ -69,6 +109,7 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
       setMode("login");
       setFullName("");
       setPosition("");
+      setConfirmPassword("");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -85,7 +126,9 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-          {mode === "login" ? "Sign in to your account" : "Request System Access"}
+          {mode === "login" ? "Sign in to your account" : 
+           mode === "register" ? "Request System Access" : 
+           "Reset Password"}
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
           Or{" "}
@@ -118,7 +161,11 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={mode === "login" ? handleLogin : handleRegister}>
+          <form className="space-y-6" onSubmit={
+            mode === "login" ? handleLogin : 
+            mode === "register" ? handleRegister : 
+            handleResetRequest
+          }>
             {mode === "register" && (
               <>
                 <div>
@@ -173,9 +220,26 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
               </div>
             </div>
 
-            {mode === "login" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Password</label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-slate-400" />
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-slate-50 transition-colors"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {(mode === "register" || mode === "forgot_password") && (
               <div>
-                <label className="block text-sm font-medium text-slate-700">Password</label>
+                <label className="block text-sm font-medium text-slate-700">Confirm Password</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock size={18} className="text-slate-400" />
@@ -183,11 +247,29 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
                   <input
                     type="password"
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-slate-50 transition-colors"
                     placeholder="••••••••"
                   />
+                </div>
+              </div>
+            )}
+
+            {mode === "login" && (
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-sm ml-auto">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setMode("forgot_password");
+                      setError(null);
+                      setSuccessMsg(null);
+                    }} 
+                    className="font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    Forgot your password?
+                  </button>
                 </div>
               </div>
             )}
@@ -202,8 +284,10 @@ export default function AuthScreen({ apiPrefix, onLoginSuccess }: AuthScreenProp
                   "Processing..."
                 ) : mode === "login" ? (
                   <>Sign in <ArrowRight size={16} /></>
-                ) : (
+                ) : mode === "register" ? (
                   <>Submit Registration Request <ArrowRight size={16} /></>
+                ) : (
+                  <>Request Password Reset <ArrowRight size={16} /></>
                 )}
               </button>
             </div>
